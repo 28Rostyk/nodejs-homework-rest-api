@@ -1,74 +1,68 @@
-const contacts = require("../models/contacts");
+const { ctrlWrapper } = require("../utils");
+
+const { Contact } = require("../models/contact");
 
 const { HttpError } = require("../helpers");
 
 const getContacts = async (req, res, next) => {
-  try {
-    const result = await contacts.listContacts();
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
+  const result = await Contact.find({}, "-createdAt -updatedAt");
+  res.json(result);
 };
 
 const getContactById = async (req, res, next) => {
-  try {
-    const { contactId: id } = req.params;
-    const result = await contacts.getContactById(id);
-    if (!result) {
-      throw HttpError(404, `Contact with ${id} not found`);
-    }
-    res.json(result);
-  } catch (error) {
-    next(error);
+  const { contactId: id } = req.params;
+  const result = await Contact.findById(id);
+  if (!result) {
+    throw HttpError(404, `Contact with ${id} not found`);
   }
+  res.json(result);
 };
 
 const postContact = async (req, res, next) => {
-  try {
-    const result = await contacts.addContact(req.body);
-
-    res.status(201).json(result);
-  } catch (error) {
-    next(error);
-  }
+  const result = await Contact.create(req.body);
+  res.status(201).json(result);
 };
 
 const deleteContact = async (req, res, next) => {
-  try {
-    const { contactId: id } = req.params;
-    const result = await contacts.removeContact(id);
-    if (!result) {
-      throw HttpError(404, `Contact with ${id} not found`);
-    }
-    res.json({
-      message: "Delete success",
-    });
-  } catch (error) {
-    next(error);
+  const { contactId: id } = req.params;
+  const result = await Contact.findByIdAndDelete(id);
+  if (!result) {
+    throw HttpError(404, `Contact with ${id} not found`);
   }
+  res.json({
+    message: "Delete success",
+  });
 };
 
 const changeContact = async (req, res, next) => {
-  try {
-    if (!Object.keys(req.body).length) {
-      return res.status(400).json({ message: "missing fields" });
-    }
-    const { contactId: id } = req.params;
-    const result = await contacts.updateContact(id, req.body);
-    if (!result) {
-      throw HttpError(404, `Contact with ${id} not found`);
-    }
-    res.json(result);
-  } catch (error) {
-    next(error);
+  if (!Object.keys(req.body).length) {
+    return res.status(400).json({ message: "missing fields" });
   }
+  const { contactId: id } = req.params;
+  const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+  if (!result) {
+    throw HttpError(404, `Contact with ${id} not found`);
+  }
+  res.json(result);
+};
+
+const changeFavoriteContact = async (req, res, next) => {
+  if (!Object.keys(req.body).length) {
+    return res.status(400).json({ message: "missing field favorite" });
+  }
+  const { contactId: id } = req.params;
+  const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+  if (!result) {
+    throw HttpError(404, `Contact with ${id} not found`);
+  }
+  res.json(result);
 };
 
 module.exports = {
-  getContacts,
-  getContactById,
-  postContact,
-  deleteContact,
-  changeContact,
+  getContacts: ctrlWrapper(getContacts),
+  getContactById: ctrlWrapper(getContactById),
+  postContact: ctrlWrapper(postContact),
+  deleteContact: ctrlWrapper(deleteContact),
+  changeContact: ctrlWrapper(changeContact),
+  changeFavoriteContact: ctrlWrapper(changeFavoriteContact),
 };
