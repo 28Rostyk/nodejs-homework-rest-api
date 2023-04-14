@@ -3,13 +3,25 @@ const { ctrlWrapper } = require("../utils");
 const { Contact } = require("../models/contact");
 
 const { HttpError } = require("../helpers");
+const { query } = require("express");
 
-const getContacts = async (req, res, next) => {
-  const result = await Contact.find({}, "-createdAt -updatedAt");
+const getContacts = async (req, res) => {
+  const { _id: owner } = req.user;
+  const { page = 1, limit = 10, ...query } = req.query;
+  const skip = (page - 1) * limit;
+
+  const result = await Contact.find(
+    { owner, ...query },
+    "-createdAt -updatedAt",
+    {
+      skip,
+      limit,
+    }
+  ).populate("owner", "email ");
   res.json(result);
 };
 
-const getContactById = async (req, res, next) => {
+const getContactById = async (req, res) => {
   const { contactId: id } = req.params;
   const result = await Contact.findById(id);
   if (!result) {
@@ -18,12 +30,15 @@ const getContactById = async (req, res, next) => {
   res.json(result);
 };
 
-const postContact = async (req, res, next) => {
-  const result = await Contact.create(req.body);
+const postContact = async (req, res) => {
+  const { _id: owner } = req.user;
+  const result = await Contact.create({ ...req.body, owner });
   res.status(201).json(result);
+  // const result = await Contact.create(req.body);
+  // res.status(201).json(result);
 };
 
-const deleteContact = async (req, res, next) => {
+const deleteContact = async (req, res) => {
   const { contactId: id } = req.params;
   const result = await Contact.findByIdAndDelete(id);
   if (!result) {
@@ -34,7 +49,7 @@ const deleteContact = async (req, res, next) => {
   });
 };
 
-const changeContact = async (req, res, next) => {
+const changeContact = async (req, res) => {
   if (!Object.keys(req.body).length) {
     return res.status(400).json({ message: "missing fields" });
   }
@@ -46,7 +61,7 @@ const changeContact = async (req, res, next) => {
   res.json(result);
 };
 
-const changeFavoriteContact = async (req, res, next) => {
+const changeFavoriteContact = async (req, res) => {
   if (!Object.keys(req.body).length) {
     return res.status(400).json({ message: "missing field favorite" });
   }
